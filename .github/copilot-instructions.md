@@ -236,8 +236,18 @@ def send_email_task(to_email: str, subject: str, body: str):
 - **Development mode**: `docker-compose -f docker-compose.dev.yaml up -d` (hot reload enabled)
 - **Production mode**: `docker-compose up -d`
 - **View logs**: `docker logs -f app_backend`
-- **Access MySQL**: `localhost:3384` (external port)
-- **Access Redis**: `localhost:6398` (external port)
+
+### Service Ports
+All services use non-standard external ports to avoid conflicts with local installations:
+
+| Service | External Port | Internal Port | Access URL |
+|---------|--------------|---------------|------------|
+| API | 8006 | 8000 | http://localhost:8006 |
+| API Docs | 8006 | 8000 | http://localhost:8006/docs |
+| MySQL | 3384 | 3306 | localhost:3384 |
+| Redis | 6398 | 6379 | localhost:6398 |
+| Flower (prod) | 5596 | 5555 | http://localhost:5596 |
+| Flower (dev) | 5595 | 5555 | http://localhost:5595 |
 
 ## Key Features to Maintain
 
@@ -256,7 +266,7 @@ def send_email_task(to_email: str, subject: str, body: str):
 ### Async Task Processing
 - Celery for background jobs
 - Redis as message broker
-- Flower for monitoring at http://localhost:5596
+- Flower for monitoring at http://localhost:5596 (production) or http://localhost:5595 (development)
 
 ### Performance
 - Async database operations
@@ -298,10 +308,12 @@ def send_email_task(to_email: str, subject: str, body: str):
 - **Internal (Docker)**: `mysql+aiomysql://root:password@mysql_app_backend:3306/dbname`
 - **External (localhost)**: `mysql+aiomysql://root:password@localhost:3384/dbname`
 - Use `MYSQL_INTERNAL_URL` in production, `MYSQL_EXTERNAL_URL` for local dev
+- Port 3384 is used externally to avoid conflicts with local MySQL installations
 
 ### Redis URLs
 - **Internal**: `redis://redis_app_backend:6379/0`
 - **External**: `redis://localhost:6398/0`
+- Port 6398 is used externally to avoid conflicts with local Redis installations
 
 ## Anti-Patterns to Avoid
 
