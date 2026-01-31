@@ -11,8 +11,8 @@ class User(Base):
     password = Column(String(150), nullable=False)
     # Usa use_alter=True para quebrar o ciclo
     current_team_id = Column(Integer, ForeignKey("teams.id", use_alter=True, name="fk_users_current_team_id"), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     # Relacionamento com os times onde o usuário é o dono (usando a coluna Team.user_id)
     teams = relationship("Team", foreign_keys="[Team.user_id]", back_populates="owner")
     # Relacionamento opcional para acessar o time atual do usuário

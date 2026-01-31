@@ -9,8 +9,8 @@ alembic
 aiohttp
 python-jose
 starlette
-aiomysql
-pymysql
+asyncpg
+psycopg2-binary
 celery[redis]
 flower
 cryptography

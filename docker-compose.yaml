@@ -7,7 +7,7 @@ services:
       - "8006:8000"
     depends_on:
       - redis_app_backend
-      - mysql_app_backend
+      - postgres_app_backend
     env_file:
       - .env
     environment:
@@ -71,25 +71,25 @@ services:
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
 
-  mysql_app_backend:
-    image: mysql
-    container_name: mysql_app_backend
+  postgres_app_backend:
+    image: postgres:16-alpine
+    container_name: postgres_app_backend
     environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: dbname
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dbname
     ports:
-      - "3384:3306"
+      - "5433:5432"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U root -d dbname"]
       interval: 5s
       timeout: 3s
       retries: 5
     volumes:
-      - mysql_app_backend_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      - postgres_app_backend_data:/var/lib/postgresql/data
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
 
 volumes:
-  mysql_app_backend_data:
+  postgres_app_backend_data:
   redis_app_backend_data:
