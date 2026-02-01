@@ -16,3 +16,5 @@ flower
 cryptography
 pyotp
 qrcode[pil]
+sentry-sdk[fastapi]==1.39.1
+python-json-logger==2.0.7
