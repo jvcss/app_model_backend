@@ -22,6 +22,7 @@
 """
 from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, Header, Request, status
+from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 import pyotp
 from redis import Redis
@@ -56,16 +57,50 @@ from app.mycelery.worker import send_password_otp, send_password_otp_local
 
 router = APIRouter()
 
+@router.post("/token", response_model=Token)
+async def oauth2_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Endpoint OAuth2 padrão para autenticação.
+
+    O Swagger UI usa este endpoint automaticamente quando você clica em "Authorize".
+
+    Note: O campo 'username' do OAuth2 é usado para aceitar o email do usuário.
+    """
+    # OAuth2 usa 'username', mas aceitamos email
+    result = await db.execute(select(User).filter(User.email == form_data.username))
+    user = result.scalar_one_or_none()
+
+    if not user or not verify_password(form_data.password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Email ou senha inválidos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    access_token = create_access_token(
+        data={"sub": str(user.id)},
+        token_version=user.token_version
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
 @router.post("/login", response_model=Token)
 async def login(login_data: Login, db: AsyncSession = Depends(get_db)):
+    """
+    Endpoint alternativo de autenticação via JSON body.
+
+    Use este endpoint se preferir enviar credenciais como JSON em vez de form-data.
+    """
     result = await db.execute(select(User).filter(User.email == login_data.email))
     user = result.scalar_one_or_none()
-    
+
     if not user or not verify_password(login_data.password, user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Credenciais inválidas")
-    
+
     access_token = create_access_token(
-        data={"sub": str(user.id)}, 
+        data={"sub": str(user.id)},
         token_version=user.token_version
     )
     return {"access_token": access_token, "token_type": "bearer"}

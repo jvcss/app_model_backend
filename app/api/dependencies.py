@@ -10,7 +10,10 @@ from app.models.user import User
 from app.core.security import SECRET_KEY, ALGORITHM
 from app.core.config import settings
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/api/auth/token",
+    description="Autenticação via email e senha"
+)
 
 async def get_db():
     async with SessionAsync() as session:
