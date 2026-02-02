@@ -21,10 +21,15 @@ from fakeredis import FakeAsyncRedis
 
 # Set test environment variables BEFORE importing app
 os.environ["MODE"] = "test"
-os.environ["POSTGRES_INTERNAL_URL"] = "postgresql+asyncpg://test_user:test_pass@localhost:5432/test_app_db"
-os.environ["POSTGRES_INTERNAL_URL_SYNC"] = "postgresql+psycopg2://test_user:test_pass@localhost:5432/test_app_db"
-os.environ["CELERY_BROKER_URL"] = "redis://localhost:6379/1"
-os.environ["CELERY_RESULT_BACKEND"] = "redis://localhost:6379/1"
+os.environ["POSTGRES_INTERNAL_URL"] = "postgresql+asyncpg://test_user:test_pass@localhost:5433/test_app_db"
+os.environ["POSTGRES_INTERNAL_URL_SYNC"] = "postgresql+psycopg2://test_user:test_pass@localhost:5433/test_app_db"
+os.environ["REDIS_URL"] = "redis://localhost:6380/0"
+os.environ["CELERY_BROKER_URL"] = "redis://localhost:6380/1"
+os.environ["CELERY_RESULT_BACKEND"] = "redis://localhost:6380/1"
+os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
+os.environ["ALGORITHM"] = "HS256"
+os.environ["ACCESS_TOKEN_EXPIRE_MINUTES"] = "30"
+os.environ["SENTRY_DSN"] = ""  # Disable Sentry in tests
 
 from app.main import app
 from app.api.dependencies import get_db, get_redis
