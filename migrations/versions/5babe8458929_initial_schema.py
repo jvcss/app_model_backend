@@ -1,8 +1,8 @@
-"""add_organizations_and_permissions_system
+"""initial_schema
 
-Revision ID: bf4152bd70b4
+Revision ID: 5babe8458929
 Revises: 
-Create Date: 2026-02-01 15:03:17.059128
+Create Date: 2026-02-01 23:00:13.630476
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'bf4152bd70b4'
+revision: str = '5babe8458929'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -48,6 +48,25 @@ def upgrade() -> None:
     op.create_index(op.f('ix_permissions_action'), 'permissions', ['action'], unique=False)
     op.create_index(op.f('ix_permissions_id'), 'permissions', ['id'], unique=False)
     op.create_index(op.f('ix_permissions_resource'), 'permissions', ['resource'], unique=False)
+    op.create_table('users',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('name', sa.String(length=50), nullable=True),
+    sa.Column('email', sa.String(length=100), nullable=False),
+    sa.Column('password', sa.String(length=150), nullable=False),
+    sa.Column('current_team_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('last_active_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('timezone', sa.String(length=50), nullable=True),
+    sa.Column('two_factor_enabled', sa.Boolean(), nullable=False),
+    sa.Column('two_factor_secret', sa.String(length=64), nullable=True),
+    sa.Column('token_version', sa.Integer(), nullable=False),
+    sa.ForeignKeyConstraint(['current_team_id'], ['teams.id'], name='fk_users_current_team_id', use_alter=True),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_id'), 'users', ['id'], unique=False)
+    op.create_index(op.f('ix_users_name'), 'users', ['name'], unique=False)
     op.create_table('clients',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -114,6 +133,25 @@ def upgrade() -> None:
     op.create_index(op.f('ix_organization_members_id'), 'organization_members', ['id'], unique=False)
     op.create_index(op.f('ix_organization_members_organization_id'), 'organization_members', ['organization_id'], unique=False)
     op.create_index(op.f('ix_organization_members_user_id'), 'organization_members', ['user_id'], unique=False)
+    op.create_table('password_resets',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('email', sa.String(length=100), nullable=False),
+    sa.Column('otp_hash', sa.String(length=255), nullable=True),
+    sa.Column('otp_expires_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('otp_verified', sa.Boolean(), nullable=False),
+    sa.Column('require_totp', sa.Boolean(), nullable=False),
+    sa.Column('totp_verified', sa.Boolean(), nullable=False),
+    sa.Column('reset_session_issued_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('consumed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('attempts', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_password_resets_email'), 'password_resets', ['email'], unique=False)
+    op.create_index(op.f('ix_password_resets_user_id'), 'password_resets', ['user_id'], unique=False)
     op.create_table('providers',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('organization_id', sa.Integer(), nullable=False),
@@ -139,6 +177,21 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_role_permissions_id'), 'role_permissions', ['id'], unique=False)
     op.create_index(op.f('ix_role_permissions_role'), 'role_permissions', ['role'], unique=False)
+    op.create_table('teams',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('name', sa.String(length=50), nullable=True),
+    sa.Column('description', sa.Text(), nullable=True),
+    sa.Column('personal_team', sa.Boolean(), nullable=True),
+    sa.Column('archived', sa.Boolean(), nullable=True),
+    sa.Column('archived_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_teams_id'), 'teams', ['id'], unique=False)
+    op.create_index(op.f('ix_teams_name'), 'teams', ['name'], unique=False)
     op.create_table('api_access_logs',
     sa.Column('id', sa.BigInteger(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=True),
@@ -187,22 +240,12 @@ def upgrade() -> None:
     op.create_index(op.f('ix_team_members_member_id'), 'team_members', ['member_id'], unique=False)
     op.create_index(op.f('ix_team_members_member_type'), 'team_members', ['member_type'], unique=False)
     op.create_index(op.f('ix_team_members_team_id'), 'team_members', ['team_id'], unique=False)
-    op.add_column('teams', sa.Column('description', sa.Text(), nullable=True))
-    op.add_column('teams', sa.Column('archived', sa.Boolean(), nullable=True))
-    op.add_column('teams', sa.Column('archived_at', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('users', sa.Column('last_active_at', sa.DateTime(timezone=True), nullable=True))
-    op.add_column('users', sa.Column('timezone', sa.String(length=50), nullable=True))
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     """Downgrade schema."""
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_column('users', 'timezone')
-    op.drop_column('users', 'last_active_at')
-    op.drop_column('teams', 'archived_at')
-    op.drop_column('teams', 'archived')
-    op.drop_column('teams', 'description')
     op.drop_index(op.f('ix_team_members_team_id'), table_name='team_members')
     op.drop_index(op.f('ix_team_members_member_type'), table_name='team_members')
     op.drop_index(op.f('ix_team_members_member_id'), table_name='team_members')
@@ -216,11 +259,17 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_api_access_logs_endpoint'), table_name='api_access_logs')
     op.drop_index(op.f('ix_api_access_logs_created_at'), table_name='api_access_logs')
     op.drop_table('api_access_logs')
+    op.drop_index(op.f('ix_teams_name'), table_name='teams')
+    op.drop_index(op.f('ix_teams_id'), table_name='teams')
+    op.drop_table('teams')
     op.drop_index(op.f('ix_role_permissions_role'), table_name='role_permissions')
     op.drop_index(op.f('ix_role_permissions_id'), table_name='role_permissions')
     op.drop_table('role_permissions')
     op.drop_index(op.f('ix_providers_id'), table_name='providers')
     op.drop_table('providers')
+    op.drop_index(op.f('ix_password_resets_user_id'), table_name='password_resets')
+    op.drop_index(op.f('ix_password_resets_email'), table_name='password_resets')
+    op.drop_table('password_resets')
     op.drop_index(op.f('ix_organization_members_user_id'), table_name='organization_members')
     op.drop_index(op.f('ix_organization_members_organization_id'), table_name='organization_members')
     op.drop_index(op.f('ix_organization_members_id'), table_name='organization_members')
@@ -236,6 +285,10 @@ def downgrade() -> None:
     op.drop_table('error_logs')
     op.drop_index(op.f('ix_clients_id'), table_name='clients')
     op.drop_table('clients')
+    op.drop_index(op.f('ix_users_name'), table_name='users')
+    op.drop_index(op.f('ix_users_id'), table_name='users')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_table('users')
     op.drop_index(op.f('ix_permissions_resource'), table_name='permissions')
     op.drop_index(op.f('ix_permissions_id'), table_name='permissions')
     op.drop_index(op.f('ix_permissions_action'), table_name='permissions')

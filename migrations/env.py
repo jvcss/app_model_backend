@@ -1,4 +1,5 @@
 from logging.config import fileConfig
+import os
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -8,6 +9,16 @@ from alembic import context
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Override sqlalchemy.url from environment variable if present
+# This allows us to use different databases for dev/test/prod
+if os.getenv("POSTGRES_INTERNAL_URL_SYNC"):
+    config.set_main_option("sqlalchemy.url", os.getenv("POSTGRES_INTERNAL_URL_SYNC"))
+elif os.getenv("POSTGRES_INTERNAL_URL"):
+    # If only async URL is set, convert it to sync for Alembic
+    async_url = os.getenv("POSTGRES_INTERNAL_URL")
+    sync_url = async_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://")
+    config.set_main_option("sqlalchemy.url", sync_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.

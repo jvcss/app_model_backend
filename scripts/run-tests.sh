@@ -6,6 +6,7 @@ echo "🧪 Running tests..."
 # Set test environment variables
 export MODE=test
 export POSTGRES_INTERNAL_URL="postgresql+asyncpg://test_user:test_pass@localhost:5433/test_app_db"
+export POSTGRES_INTERNAL_URL_SYNC="postgresql+psycopg2://test_user:test_pass@localhost:5433/test_app_db"
 export REDIS_URL="redis://localhost:6380/0"
 export SECRET_KEY="test-secret-key-for-local-testing"
 export ALGORITHM="HS256"

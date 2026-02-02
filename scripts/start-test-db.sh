@@ -28,6 +28,7 @@ echo "✅ Redis is ready!"
 echo "🔄 Running database migrations..."
 export MODE=test
 export POSTGRES_INTERNAL_URL="postgresql+asyncpg://test_user:test_pass@localhost:5433/test_app_db"
+export POSTGRES_INTERNAL_URL_SYNC="postgresql+psycopg2://test_user:test_pass@localhost:5433/test_app_db"
 
 alembic upgrade head
 

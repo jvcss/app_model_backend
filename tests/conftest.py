@@ -40,26 +40,27 @@ TEST_DATABASE_URL = os.environ["POSTGRES_INTERNAL_URL"]
 
 # ==================== Event Loop ====================
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def event_loop() -> Generator:
     """
-    Create event loop for entire test session.
+    Create event loop for each test function.
 
-    Session-scoped to avoid creating/closing loop per test.
+    Function-scoped to avoid loop conflicts between tests.
     """
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     yield loop
     loop.close()
 
 
 # ==================== Database ====================
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 async def test_engine():
     """
-    Create test database engine (session-scoped).
+    Create test database engine (function-scoped).
 
-    Creates all tables before tests and drops them after.
+    Uses existing tables from migrations (no create/drop).
     """
     engine = create_async_engine(
         TEST_DATABASE_URL,
@@ -67,15 +68,7 @@ async def test_engine():
         echo=False  # Set to True for SQL debugging
     )
 
-    # Create all tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
     yield engine
-
-    # Drop all tables after all tests
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
     await engine.dispose()
 
