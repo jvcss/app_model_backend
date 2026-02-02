@@ -55,7 +55,11 @@ Endpoints que requerem autenticação terão um ícone de cadeado 🔒
 setup_logging()
 init_sentry()
 
-Base.metadata.create_all(bind=engine_internal_sync)
+# Only create tables automatically in non-test mode
+# In test mode, we use Alembic migrations for better control
+import os
+if os.getenv("MODE") != "test":
+    Base.metadata.create_all(bind=engine_internal_sync)
 
 origins = [
     "*"

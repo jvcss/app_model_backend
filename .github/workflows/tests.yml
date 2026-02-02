@@ -1,0 +1,149 @@
+name: Tests
+
+on:
+  push:
+    branches: [master, main, develop]
+  pull_request:
+    branches: [master, main, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_app_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+
+      - name: Set up environment variables
+        run: |
+          echo "MODE=test" >> $GITHUB_ENV
+          echo "POSTGRES_INTERNAL_URL=postgresql+asyncpg://test_user:test_pass@localhost:5432/test_app_db" >> $GITHUB_ENV
+          echo "REDIS_URL=redis://localhost:6379/0" >> $GITHUB_ENV
+          echo "SECRET_KEY=test-secret-key-for-ci-only" >> $GITHUB_ENV
+          echo "ALGORITHM=HS256" >> $GITHUB_ENV
+          echo "ACCESS_TOKEN_EXPIRE_MINUTES=30" >> $GITHUB_ENV
+
+      - name: Run database migrations
+        run: |
+          alembic upgrade head
+
+      - name: Run smoke tests
+        run: |
+          pytest tests/smoke -v --tb=short --maxfail=3
+        continue-on-error: false
+
+      - name: Run unit tests with coverage
+        run: |
+          pytest tests/unit -v --cov=app --cov-report=xml --cov-report=term-missing
+        continue-on-error: false
+
+      - name: Run integration tests with coverage
+        run: |
+          pytest tests/integration -v --cov=app --cov-append --cov-report=xml --cov-report=term-missing
+        continue-on-error: false
+
+      - name: Run E2E tests with coverage
+        run: |
+          pytest tests/e2e -v --cov=app --cov-append --cov-report=xml --cov-report=term-missing
+        continue-on-error: false
+
+      - name: Generate coverage report
+        run: |
+          coverage report --fail-under=80
+        continue-on-error: false
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml
+          flags: unittests,integration,e2e
+          name: codecov-umbrella
+          fail_ci_if_error: true
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+          retention-days: 30
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black isort mypy
+
+      - name: Run Ruff linter
+        run: |
+          ruff check app/ tests/
+        continue-on-error: true
+
+      - name: Check code formatting with Black
+        run: |
+          black --check app/ tests/
+        continue-on-error: true
+
+      - name: Check import sorting with isort
+        run: |
+          isort --check-only app/ tests/
+        continue-on-error: true
+
+      - name: Run type checking with mypy
+        run: |
+          mypy app/
+        continue-on-error: true

@@ -1,0 +1,28 @@
+# Test Framework
+pytest==8.0.0
+pytest-asyncio==0.23.3              # Async support
+pytest-cov==4.1.0                    # Coverage
+pytest-xdist==3.5.0                  # Paralelização
+pytest-env==1.1.3                    # Env vars
+pytest-mock==3.12.0                  # Mock wrapper
+
+# HTTP Testing
+httpx==0.26.0                        # AsyncClient para FastAPI
+respx==0.20.2                        # Mock HTTP responses
+
+# Factories & Fakes
+factory-boy==3.3.0                   # Model factories
+Faker==22.0.0                        # Dados realistas
+freezegun==1.4.0                     # Mock datetime
+fakeredis==2.21.0                    # Redis mock
+
+# Async Support
+anyio==4.2.0                         # Backend async para httpx
+
+# Coverage & Reports
+coverage[toml]==7.4.0                # Coverage tool
+pytest-html==4.1.1                   # HTML reports
+
+# Type Checking (opcional)
+mypy==1.8.0                          # Static type checking
+types-redis                          # Type stubs

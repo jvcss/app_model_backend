@@ -1,0 +1,23 @@
+[run]
+source = app
+omit =
+    */tests/*
+    */migrations/*
+    */__pycache__/*
+    */site-packages/*
+    app/mycelery/*
+
+[report]
+precision = 2
+fail_under = 80
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+
+[html]
+directory = htmlcov

@@ -6,10 +6,15 @@
 
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=for-the-badge&logo=fastapi)
 ![Python](https://img.shields.io/badge/Python-3.12+-3776AB?style=for-the-badge&logo=python)
-![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=for-the-badge&logo=mysql)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=for-the-badge&logo=postgresql)
 ![Redis](https://img.shields.io/badge/Redis-7.0+-DC382D?style=for-the-badge&logo=redis)
 ![Celery](https://img.shields.io/badge/Celery-5.3+-37814A?style=for-the-badge&logo=celery)
 ![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)
+
+![Tests](https://github.com/jvcss/app_model_backend/workflows/Tests/badge.svg)
+[![codecov](https://codecov.io/gh/jvcss/app_model_backend/branch/master/graph/badge.svg)](https://codecov.io/gh/jvcss/app_model_backend)
+![Test Count](https://img.shields.io/badge/tests-882%2B-success)
+![Coverage](https://img.shields.io/badge/coverage-%E2%89%A580%25-brightgreen)
 
 </div>
 
@@ -294,13 +299,49 @@ docker-compose logs -f
 
 ## 🧪 Testing
 
-```bash
-# Install test dependencies
-pip install pytest pytest-asyncio httpx
+Comprehensive test suite with **882+ automated tests** and **≥80% coverage**.
 
-# Run tests
-pytest
+### Test Types
+- **Unit Tests** (265+): Core logic, security, permissions, schemas
+- **Integration Tests** (590+): All API endpoints with real PostgreSQL
+- **Smoke Tests** (11): Critical endpoints for CI/CD (<10s)
+- **E2E Tests** (16): Complete user flows (registration, 2FA, collaboration)
+
+### Quick Start
+
+```bash
+# Install dependencies
+pip install -r requirements-test.txt
+
+# Setup test database
+createdb test_app_db
+POSTGRES_INTERNAL_URL=postgresql+asyncpg://localhost/test_app_db alembic upgrade head
+
+# Run all tests
+pytest -v
+
+# Run with coverage
+pytest --cov=app --cov-report=html
+open htmlcov/index.html
+
+# Run specific test types
+pytest tests/unit -v          # Unit tests only
+pytest tests/integration -v   # Integration tests only
+pytest tests/smoke -v         # Smoke tests only (<10s)
+pytest tests/e2e -v           # E2E flows only
+
+# Parallel execution (faster)
+pytest -n 4
 ```
+
+### CI/CD
+
+All tests run automatically on GitHub Actions:
+- **Tests workflow**: Full test suite on push/PR
+- **Quick Check**: Smoke tests on PR (<5 min)
+- **Nightly**: Matrix tests (Python 3.11/3.12 × PostgreSQL 14/15/16)
+
+See [Testing Guide](docs/TESTING.md) for complete documentation.
 
 ## 🤝 Contributing
 
