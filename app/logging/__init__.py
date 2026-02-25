@@ -1,7 +1,8 @@
 """
 Módulo de logging customizado com integração WhatsApp
 """
-from app.logging.custom_logger import CustomLogger, LogLevel, get_logger
+from app.logging.custom_logger import CustomLogger, get_logger
+from app.logging.log_levels import LogLevel
 from app.logging.whatsapp_handler import WhatsAppHandler, WhatsAppHandlerAsync
 from app.logging.filters import (
     RateLimitFilter,

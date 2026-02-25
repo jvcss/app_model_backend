@@ -4,6 +4,8 @@ import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.mycelery.app import celery_app
+from app.core.config import settings
+from app.logging import get_logger
 
 @celery_app.task(name="create_task")
 def create_task(task_type):
@@ -15,6 +17,7 @@ def send_password_otp(email: str, otp: str):
     """Envia OTP por email usando Gmail SMTP"""
     try:
         # Configurações SMTP
+        get_logger("auth").info(f"Preparing to send OTP to {email}")
         smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
         smtp_port = int(os.getenv("SMTP_PORT", "587"))
         smtp_username = os.getenv("SMTP_USERNAME")
@@ -23,8 +26,9 @@ def send_password_otp(email: str, otp: str):
         from_name = os.getenv("SMTP_FROM_NAME", "Sistema de Sindicância")
 
         if not smtp_username or not smtp_password:
+            get_logger("auth").error("SMTP credentials not configured")
             raise ValueError("SMTP credentials not configured")
-
+        get_logger("auth").info(f"SMTP configuration loaded for {smtp_username}")
         # Criar mensagem
         msg = MIMEMultipart()
         msg['From'] = f"{from_name} <{from_email}>"
@@ -45,6 +49,7 @@ def send_password_otp(email: str, otp: str):
             </body>
         </html>
         """
+        get_logger("auth").info(f"Sending OTP to {email}")
 
         msg.attach(MIMEText(body, 'html'))
 
@@ -60,7 +65,7 @@ def send_password_otp(email: str, otp: str):
 
     except Exception as e:
         # Log do erro (em produção, use logging adequado)
-        print(f"Erro ao enviar email para {email}: {str(e)}")
+        get_logger("auth").error(f"Erro ao enviar email para {email}: {str(e)}")
         return {"sent": False, "error": str(e)}
 
 @celery_app.task(name="send_password_otp_local")
@@ -68,9 +73,10 @@ def send_password_otp_local(email: str, otp: str):
     """Simula envio de OTP localmente (para desenvolvimento)"""
     print(f"=== EMAIL SIMULADO ===")
     print(f"Para: {email}")
-    print(f"Assunto: Código de Verificação - Sistema de Sindicância Applicativo")
+    print(f"Assunto: Código de Verificação - Sistema de Sindicância {settings.APP_NAME}")
     print(f"Código: {otp}")
     print(f"====================")
+    get_logger("auth").info(f"Simulated sending OTP to {email}")
     return {"sent": True}
 
 @celery_app.task(name="send_whatsapp_log", max_retries=3)
@@ -92,6 +98,7 @@ def send_whatsapp_log(api_url: str, token: str, instance: str, phone_number: str
         return True
 
     except Exception as e:
+        get_logger("auth").error(f"Erro ao enviar log via WhatsApp: {e}")
         print(f"Erro ao enviar log via WhatsApp: {e}")
         # Em caso de falha, tenta novamente com backoff exponencial que significa que a cada falha o tempo de espera dobra
         raise send_whatsapp_log.retry(exc=e, countdown=2 ** send_whatsapp_log.request.retries)

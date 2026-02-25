@@ -30,6 +30,7 @@ from sqlalchemy import select
 
 from app.helpers.getters import isDebugMode
 from app.helpers.qrcode_generator import generate_qr_code_base64
+from app.logging.custom_logger import get_logger
 from app.schemas.user import UserCreate
 from app.schemas.auth import (
     Token, 
@@ -52,9 +53,17 @@ from app.core.security import (
     verify_totp, generate_totp_secret, create_access_token, get_password_hash, SECRET_KEY, ALGORITHM
 )
 from app.helpers.rate_limit import allow
-from app.mycelery.worker import send_password_otp, send_password_otp_local
+from app.mycelery.worker import create_task, send_password_otp, send_password_otp_local
 
 router = APIRouter()
+
+@router.get("/test-health")
+async def health_check(
+    current_user: User = Depends(get_current_user)
+):
+    get_logger("auth").info(f"Health check by user {current_user.id}")
+    resp = create_task.delay(task_type=10)
+    return {"status": "healthy", "task_id": resp.id}
 
 @router.post("/login", response_model=Token)
 async def login(login_data: Login, db: AsyncSession = Depends(get_db)):
@@ -134,14 +143,19 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
 
 @router.post("/forgot-password/start", status_code=status.HTTP_202_ACCEPTED)
 async def forgot_password_start(payload: ForgotPasswordStartIn, request: Request, db: AsyncSession = Depends(get_db)):
+    logger = get_logger("auth")
     client_ip = request.headers.get("x-forwarded-for", request.client.host)
+
     if not allow("fp:start", payload.email, client_ip, max_attempts=5, window_sec=900):
+        logger.warning(f"Too many requests for {payload.email} from {client_ip}")
         raise HTTPException(status_code=429, detail="Too many requests")
 
     result = await db.execute(select(User).filter(User.email == payload.email))
     user = result.scalar_one_or_none()
+    logger.info(f"Password reset requested for {payload.email}")
 
     if user:
+        logger.info(f"User found for {payload.email}, generating OTP")
         otp = generate_otp()
         pr = PasswordReset(
             user_id=user.id,
@@ -150,10 +164,14 @@ async def forgot_password_start(payload: ForgotPasswordStartIn, request: Request
             otp_expires_at=datetime.now(timezone.utc) + timedelta(minutes=10),
             require_totp=user.two_factor_enabled
         )
+        logger.info(f"OTP generated for {payload.email}, saving to database")
         db.add(pr)
         await db.commit()
+        logger.info(f"Generated OTP for {payload.email}")
 
         # Envia OTP de forma assíncrona via Celery
+        if not isDebugMode():
+            send_password_otp.delay(payload.email, otp)
         send_password_otp_local.delay(payload.email, otp)
 
     return {"message": "If the email exists, a verification code has been sent."}

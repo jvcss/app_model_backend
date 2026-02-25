@@ -14,8 +14,14 @@ class WhatsAppService:
             "number": phone, 
             "text": text
         }
-        async with httpx.AsyncClient() as client:
-            await client.post(f"{self.api_url}/sendText/{self.instance}", headers=headers, json=data)
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(f"{self.api_url}/sendText/{self.instance}", headers=headers, json=data)
+        except httpx.HTTPError as e:
+            print("whatsapp")
+            print(f"Error sending WhatsApp message: {e}")
+            print("*" * 20)
+            raise
 
     async def send_message_with_url_file(self, phone: str, caption: str, file_name: str, pdf_url: str = None):
         headers = {

@@ -3,8 +3,9 @@ services:
     build: .
     container_name: app_backend
     command: ["api"]
+    
     ports:
-      - "8006:8000"
+      - "8000:8000"
     depends_on:
       - redis_app_backend
       - mysql_app_backend

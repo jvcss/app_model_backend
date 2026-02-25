@@ -5,24 +5,15 @@ Níveis: warning, info, request, error, slow, great
 import logging
 import traceback
 from datetime import datetime, timezone
-from typing import Optional, Dict, Any
-from enum import Enum
+from typing import Dict, Any
 
+from app.logging.log_levels import LogLevel
 from app.logging.whatsapp_handler import WhatsAppHandler
 from app.logging.formatters import get_formatter_for_level
 from app.logging.filters import RateLimitFilter, EnvironmentFilter
 from app.core.config import settings
 from app.helpers.getters import isDebugMode
 
-
-class LogLevel(str, Enum):
-    """Níveis customizados de log"""
-    WARNING = "warning"
-    INFO = "info"
-    REQUEST = "request"
-    ERROR = "error"
-    SLOW = "slow"
-    GREAT = "great"
 
 
 class CustomLogger:
@@ -39,7 +30,7 @@ class CustomLogger:
     def __init__(self, name: str):
         self.name = name
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(logging.DEBUG if isDebugMode() else logging.INFO)
+        self.logger.setLevel(logging.DEBUG if isDebugMode() else logging.DEBUG)#logging.INFO
         
         # Remove handlers existentes para evitar duplicação
         self.logger.handlers.clear()
@@ -56,13 +47,14 @@ class CustomLogger:
         # Handler WhatsApp (apenas em produção se configurado)
         if self._should_enable_whatsapp():
             whatsapp_handler = WhatsAppHandler(
+                api_url=settings.EVOLUTION_API_URL,
                 phone_number=settings.WHATSAPP_LOG_NUMBER,
-                api_key=settings.EVOLUTIONS_API_KEY,
-                api_token=settings.EVOLUTIONS_API_TOKEN
+                instance=settings.EVOLUTION_API_KEY,
+                token=settings.EVOLUTION_API_TOKEN
             )
             
             # Adiciona filtros
-            whatsapp_handler.addFilter(RateLimitFilter(max_per_hour=10))
+            whatsapp_handler.addFilter(RateLimitFilter(max_per_hour=1000))
             whatsapp_handler.addFilter(EnvironmentFilter())
             
             self.logger.addHandler(whatsapp_handler)
@@ -101,12 +93,25 @@ class CustomLogger:
         if exc_info:
             log_data["traceback"] = self._get_clean_traceback()
         
-        # Cria mensagem formatada
-        formatted_message = get_formatter_for_level(level).format(
-            message=message,
-            **log_data
-        )
-        
+
+        # formatted_message = get_formatter_for_level(level).format(
+        #     message=message,
+        #     **log_data
+        # )
+        # Cria um LogRecord temporário para formatar a mensagem
+        import logging as logging_module
+        record = logging_module.LogRecord(
+            name=self.name,
+            level=logging.INFO,  # Será sobrescrito depois
+            pathname="",
+            lineno=0,
+            msg=message,
+            args=(),
+            exc_info=None
+         )
+        record.__dict__.update(log_data)
+        formatted_message = get_formatter_for_level(level).format(record)
+
         # Mapeia para níveis padrão do logging
         log_level_map = {
             LogLevel.WARNING: logging.WARNING,
